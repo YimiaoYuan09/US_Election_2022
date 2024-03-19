@@ -19,15 +19,14 @@ raw_ces2022 <-
       cols(
         "votereg" = col_integer(),
         "presvote20post" = col_integer(),
-        "race" = col_integer(),
-        "region" = col_integer()
+        "race" = col_integer()
       )
   )
 
 # only interested in:
 # respondents who are registered to vote: votereg = 1
 # vote for Trump or Biden: presvote20post = 1 Biden, 2 Trump
-# no NA in race, region
+# no NA in race
 cleaned_ces2022 <-
   raw_ces2022 |>
   filter(votereg == 1,
@@ -44,15 +43,9 @@ cleaned_ces2022 <-
       race == 6 ~ "Middle Eastern",
       race == 7 ~ "Two or more races",
       race == 8 ~ "Other"
-    ),
-    region = case_when(
-      region == 1 ~ "Northeast",
-      region == 2 ~ "Midwest",
-      region == 3 ~ "South",
-      region == 4 ~ "West"
     )
   ) |>
-  select(voted_for, race, region)
+  select(voted_for, race)
 
 #### Save data ####
 write_csv(cleaned_ces2022, "data/analysis_data/cleaned_ces2022.csv")

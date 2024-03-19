@@ -17,7 +17,6 @@ clean_data <- read_csv("data/analysis_data/cleaned_ces2022.csv")
 
 # Convert variables to factors
 clean_data$race <- factor(clean_data$race)
-clean_data$region <- factor(clean_data$region)
 
 # Create voted_for variable in binary form
 clean_data$voted_for_binary <- ifelse(clean_data$voted_for == "Biden", 1, 0)
@@ -30,18 +29,48 @@ ces2022_sample <-
   clean_data |> 
   slice_sample(n = 1000)
 
-election_model <-
+# Logistic model
+logistic_model <-
   stan_glm(
-    voted_for_binary ~ race + region,
+    voted_for_binary ~ race,
     data = ces2022_sample,
     family = binomial(link = "logit"),
     prior = normal(location = 0, scale = 2.5, autoscale = TRUE),
-    prior_intercept = 
-      normal(location = 0, scale = 2.5, autoscale = TRUE),
+    prior_intercept = normal(location = 0, scale = 2.5, autoscale = TRUE),
     seed = 820
   )
 
 saveRDS(
-  election_model,
-  file = "models/election_model.rds"
+  logistic_model,
+  file = "models/logistic_model.rds"
+)
+
+# Poisson Model
+poisson_model <-
+  stan_glm(
+    voted_for_binary ~ race,
+    data = ces2022_sample,
+    family = poisson(link = "log"),
+    prior = normal(location = 0, scale = 2.5, autoscale = TRUE),
+    prior_intercept = normal(location = 0, scale = 2.5, autoscale = TRUE),
+    seed = 820
+  )
+
+saveRDS(
+  poisson_model,
+  file = "models/poisson_model.rds"
+)
+
+# Negative binomial regression
+neg_bio_model <-
+  stan_glm(
+    voted_for_binary ~ race,
+    data = ces2022_sample,
+    family = neg_binomial_2(link = "log"),
+    seed = 820
+  )
+
+saveRDS(
+  neg_bio_model,
+  file = "models/neg_bio_model.rds"
 )

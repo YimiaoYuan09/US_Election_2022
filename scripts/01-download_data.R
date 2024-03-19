@@ -24,7 +24,7 @@ raw_ces2022 <-
 
 raw_ces2022 <-
   raw_ces2022 |>
-  select(votereg, presvote20post, race, region)
+  select(votereg, presvote20post, race)
 
 
 #### Save data ####

@@ -1,13 +1,10 @@
 ---
-title: "My title"
-subtitle: "My subtitle if needed"
+title: "2022 US Political Survey Analysis"
 author: 
-  - First author
-  - Another author
-thanks: "Code and data are available at: LINK."
+  - Yimiao Yuan
+thanks: "Code and data are available at: https://github.com/YimiaoYuan09/US_Election_2022"
 date: today
 date-format: long
-abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
 format: pdf
 number-sections: true
 bibliography: references.bib
@@ -19,203 +16,146 @@ bibliography: references.bib
 #| message: false
 
 library(tidyverse)
-library(palmerpenguins)
+library(here)
+library(rstanarm)
+library(modelsummary)
+library(knitr)
+library(marginaleffects)
+library(tibble)
+library(margins)
 ```
 
 
 # Introduction
+In this paper, I use the 2022 Cooperative Election Study (CES) [@citeCes2022] as our primary dataset. This is a long-established annual political survey of US. In 2022, there were 61,000 American adults completed the survey. Since it is difficult to observe such a large dataset, this paper will only analyze respondents who are registered to vote and focus on Biden and Trump's results. 
 
-You can and should cross-reference sections and sub-sections. We use @citeR and @rohan.
+The dataset is downloaded, cleaned and analyzed using statistical programming language R [@citeR], with packages `tidyverse` [@citeTidyverse], `here` [@citeHere], `rstanarm` [@citeRstanarm], `modelsummary` [@citeModleSummary], `knitr` [@citeKnitr], `marginaleffects` [@citeMarginalEffects].
 
-The remainder of this paper is structured as follows. @sec-data....
-
-
-
-# Data {#sec-data}
-
-Some of our data is of penguins (@fig-bills), from @palmerpenguins.
 
 ```{r}
-#| label: fig-bills
-#| fig-cap: Bills of penguins
-#| echo: false
-
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar(alpha = 0.8) +
-  scale_fill_manual(values = c("darkorange","purple","cyan4"),
-                    guide = "none") +
-  theme_minimal() +
-  facet_wrap(~species, ncol = 1) +
-  coord_flip()
-```
-
-Talk more about it.
-
-And also planes (@fig-planes). (You can change the height and width, but don't worry about doing that until you have finished every other aspect of the paper - Quarto will try to make it look nice and the defaults usually work well once you have enough text.)
-
-```{r}
-#| label: fig-planes
-#| fig-cap: Relationship between wing length and width
-#| echo: false
+#| include: false
 #| warning: false
 #| message: false
 
-analysis_data <- read_csv(here::here("data/analysis_data/analysis_data.csv"))
-
-analysis_data |> 
-  ggplot(aes(x = width, y = length)) +
-  geom_point(alpha = 0.8) +
-  theme_minimal() +
-  labs(x = "Wing width (mm)",
-       y = "Wing length (mm)")
+# read in cleaned data
+ces2022 <-  read_csv(here::here("data/analysis_data/cleaned_ces2022.csv"))
 ```
 
-Talk way more about it. 
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+
+# change column type to factor
+ces2022 <-
+  ces2022 |>
+  mutate(
+    voted_for = as_factor(voted_for),
+    race = factor(
+      race,
+      levels = c(
+        "White",
+        "Black",
+        "Hispanic",
+        "Asian",
+        "Native American",
+        "Middle Eastern",
+        "Two or more races",
+        "Other"
+      )
+    )
+  ) |>
+  select(voted_for, race)
+```
 
 
+# Model {#sec-model}
+The models are created to analyze the relationship between voter preferences and voter's race. In the model, $y_i$ represents whether an individual voted Biden or Trump. For all parameters, I use a normal distribution with a mean of 0 and a standard deviation of 2.5.
 
-# Model
-
-The goal of our modelling strategy is twofold. Firstly,...
-
-Here we briefly describe the Bayesian analysis model used to investigate... Background details and diagnostics are included in [Appendix -@sec-model-details].
-
-## Model set-up
-
-Define $y_i$ as the number of seconds that the plane remained aloft. Then $\beta_i$ is the wing width and $\gamma_i$ is the wing length, both measured in millimeters.  
+## Logistic Regression
 
 \begin{align} 
-y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
-\mu_i &= \alpha + \beta_i + \gamma_i\\
+y_i|\pi_i &\sim \mbox{Bern}(\pi_i) \\
+\mbox{logit}(\pi_i) &= \alpha + \beta_1 \times \mbox{race}_i\\
 \alpha &\sim \mbox{Normal}(0, 2.5) \\
-\beta &\sim \mbox{Normal}(0, 2.5) \\
-\gamma &\sim \mbox{Normal}(0, 2.5) \\
-\sigma &\sim \mbox{Exponential}(1)
+\beta_1 &\sim \mbox{Normal}(0, 2.5) \\
+\beta_2 &\sim \mbox{Normal}(0, 2.5)
 \end{align}
 
-We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
+## Poisson Regression
 
+\begin{align} 
+y_i|\lambda_i &\sim \mbox{Poisson}(\lambda_i) \\
+\mbox{logit}(\lambda_i) &= \alpha + \beta_1 \times \mbox{race}_i\\
+\end{align}
 
-### Model justification
-
-We expect a positive relationship between the size of the wings and time spent aloft. In particular...
-
-We can use maths by including latex between dollar signs, for instance $\theta$.
-
-
-# Results
-
-Our results are summarized in @tbl-modelresults.
+## Model Results
 
 ```{r}
 #| echo: false
 #| eval: true
 #| warning: false
 #| message: false
+#| label: tbl-modelresults1
+#| tbl-cap: "Logistic and Poisson model results"
 
-library(rstanarm)
+logistic_model <-
+  readRDS(file = here::here("models/logistic_model.rds"))
 
-first_model <-
-  readRDS(file = here::here("models/first_model.rds"))
-```
+poisson_model <-
+  readRDS(file = here::here("models/poisson_model.rds"))
 
-```{r}
-#| echo: false
-#| eval: true
-#| label: tbl-modelresults
-#| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
-#| warning: false
 
-modelsummary::modelsummary(
+modelsummary(
   list(
-    "First model" = first_model
-  ),
-  statistic = "mad",
-  fmt = 2
+    "Logistic" = logistic_model,
+    "Poisson" = poisson_model
+  )
 )
 ```
 
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+#| label: tbl-modelresults2
+#| tbl-cap: "Negative Binomial model results"
+
+neg_bio_model <-
+  readRDS(file = here::here("models/neg_bio_model.rds"))
+
+summary(neg_bio_model)[1:11, 1:3] |> 
+  kable()
+```
 
 
 
-# Discussion
+The results are summarized in @tbl-modelresults1 and @tbl-modelresults2. Poisson and Negative Binomial model have similar results, while Logistic model has a slightly different one. Logistic model has an intercept of around 1.7, but poisson and negative binomial model is about -0.2. Other parameters have similar trends in these three models, but with different values.
 
-## First discussion point {#sec-first-point}
-
-If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
-
-## Second discussion point
-
-## Third discussion point
-
-## Weaknesses and next steps
-
-Weaknesses and next steps should also be included.
-
-\newpage
-
-\appendix
-
-# Appendix {-}
-
-
-# Additional data details
-
-# Model details {#sec-model-details}
 
 ## Posterior predictive check
-
-In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. This shows...
-
-In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. This shows... 
+@fig-post_dist shows the posterior distribution for three models. According to the graphs, I can conclude that Logistic Regression is a better choice for current situation. Also, since our outcome (vote for Biden/Trump) is a binary variable, Logistic regression fits better. Poisson regression and negative binomial regression are used where the dependent variable represents the count of events occurring at a fixed time or spatial interval.
 
 ```{r}
-#| eval: true
+#| label: fig-post_dist
+#| fig-cap: "Posterior distribution for models"
+#| fig-subcap: ["Logistic Regression", "Poisson Regression", "Negative Binomial Regression"]
+#| layout-ncol: 3
 #| echo: false
-#| message: false
 #| warning: false
-#| label: fig-ppcheckandposteriorvsprior
-#| layout-ncol: 2
-#| fig-cap: "Examining how the model fits, and is affected by, the data"
-#| fig-subcap: ["Posterior prediction check", "Comparing the posterior with the prior"]
-
-pp_check(first_model) +
-  theme_classic() +
-  theme(legend.position = "bottom")
-
-posterior_vs_prior(first_model) +
-  theme_minimal() +
-  scale_color_brewer(palette = "Set1") +
-  theme(legend.position = "bottom") +
-  coord_flip()
-```
-
-## Diagnostics
-
-@fig-stanareyouokay-1 is a trace plot. It shows... This suggests...
-
-@fig-stanareyouokay-2 is a Rhat plot. It shows... This suggests...
-
-```{r}
-#| echo: false
-#| eval: true
 #| message: false
-#| warning: false
-#| label: fig-stanareyouokay
-#| fig-cap: "Checking the convergence of the MCMC algorithm"
-#| fig-subcap: ["Trace plot", "Rhat plot"]
-#| layout-ncol: 2
 
-plot(first_model, "trace")
+pp_check(logistic_model)
 
-plot(first_model, "rhat")
+pp_check(poisson_model)
+
+pp_check(neg_bio_model)
 ```
-
 
 
 \newpage
 
 
 # References
-
 
