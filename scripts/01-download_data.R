@@ -1,26 +1,31 @@
 #### Preamble ####
-# Purpose: Downloads and saves the data from [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 11 February 2023 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
-# License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
+# Purpose: Downloads and saves the data from 2022 Cooperative Election Study (CES)
+# Author: Yimiao Yuan
+# Date: 18 March 2024
+# Contact: yymlinda.yuan@mail.utoronto.ca
+# License: --
+# Pre-requisites: --
+# CES website:  https://doi.org/10.7910/DVN/PR4L8P
 
 
 #### Workspace setup ####
-library(opendatatoronto)
+library(dataverse)
 library(tidyverse)
-# [...UPDATE THIS...]
+
 
 #### Download data ####
-# [...ADD CODE HERE TO DOWNLOAD...]
+raw_ces2022 <-
+  get_dataframe_by_name(
+    filename = "CCES22_Common_OUTPUT_vv_topost.csv",
+    dataset = "10.7910/DVN/PR4L8P",
+    server = "dataverse.harvard.edu",
+    .f = read_csv
+  )
 
+raw_ces2022 <-
+  raw_ces2022 |>
+  select(votereg, presvote20post, race, region)
 
 
 #### Save data ####
-# [...UPDATE THIS...]
-# change the_raw_data to whatever name you assigned when you downloaded it.
-write_csv(the_raw_data, "inputs/data/raw_data.csv") 
-
-         
+write_csv(raw_ces2022, "data/raw_data/ces2022.csv")

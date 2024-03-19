@@ -1,44 +1,58 @@
 #### Preamble ####
-# Purpose: Cleans the raw plane data recorded by two observers..... [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 6 April 2023 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
-# License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
+# Purpose: Cleans the raw CES data in the data folder
+# Author: Yimiao Yuan
+# Date: 19 March 2024
+# Contact: yymlinda.yuan@mail.utoronto.ca
+# License: --
+# Pre-requisites: run 01-download_data.R in scripts folder first to get the raw data
+# Common Content of dataset: https://doi.org/10.7910/DVN/PR4L8P
 
 #### Workspace setup ####
 library(tidyverse)
 
 #### Clean data ####
-raw_data <- read_csv("inputs/data/plane_data.csv")
+# read in raw data, define column type
+raw_ces2022 <-
+  read_csv(
+    "data/raw_data/ces2022.csv",
+    col_types =
+      cols(
+        "votereg" = col_integer(),
+        "presvote20post" = col_integer(),
+        "race" = col_integer(),
+        "region" = col_integer()
+      )
+  )
 
-cleaned_data <-
-  raw_data |>
-  janitor::clean_names() |>
-  select(wing_width_mm, wing_length_mm, flying_time_sec_first_timer) |>
-  filter(wing_width_mm != "caw") |>
+# only interested in:
+# respondents who are registered to vote: votereg = 1
+# vote for Trump or Biden: presvote20post = 1 Biden, 2 Trump
+# no NA in race, region
+cleaned_ces2022 <-
+  raw_ces2022 |>
+  filter(votereg == 1,
+         presvote20post %in% c(1, 2)) |>
   mutate(
-    flying_time_sec_first_timer = if_else(flying_time_sec_first_timer == "1,35",
-                                   "1.35",
-                                   flying_time_sec_first_timer)
+    voted_for = if_else(presvote20post == 1, "Biden", "Trump"),
+    voted_for = as_factor(voted_for),
+    race = case_when(
+      race == 1 ~ "White",
+      race == 2 ~ "Black",
+      race == 3 ~ "Hispanic",
+      race == 4 ~ "Asian",
+      race == 5 ~ "Native American",
+      race == 6 ~ "Middle Eastern",
+      race == 7 ~ "Two or more races",
+      race == 8 ~ "Other"
+    ),
+    region = case_when(
+      region == 1 ~ "Northeast",
+      region == 2 ~ "Midwest",
+      region == 3 ~ "South",
+      region == 4 ~ "West"
+    )
   ) |>
-  mutate(wing_width_mm = if_else(wing_width_mm == "490",
-                                 "49",
-                                 wing_width_mm)) |>
-  mutate(wing_width_mm = if_else(wing_width_mm == "6",
-                                 "60",
-                                 wing_width_mm)) |>
-  mutate(
-    wing_width_mm = as.numeric(wing_width_mm),
-    wing_length_mm = as.numeric(wing_length_mm),
-    flying_time_sec_first_timer = as.numeric(flying_time_sec_first_timer)
-  ) |>
-  rename(flying_time = flying_time_sec_first_timer,
-         width = wing_width_mm,
-         length = wing_length_mm
-         ) |> 
-  tidyr::drop_na()
+  select(voted_for, race, region)
 
 #### Save data ####
-write_csv(cleaned_data, "outputs/data/analysis_data.csv")
+write_csv(cleaned_ces2022, "data/analysis_data/cleaned_ces2022.csv")
